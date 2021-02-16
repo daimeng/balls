@@ -17,7 +17,7 @@ class Main extends hxd.App {
 		new Entity(100, 200, 8);
 		new Entity(200, 100, 8);
 
-		systems = [new CollisionSystem(), new MoveSystem()];
+		systems = [new BorderSystem(), new CollisionSystem(), new MoveSystem()];
 	}
 
 	override function update(dt:Float) {

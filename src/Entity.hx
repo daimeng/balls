@@ -6,7 +6,7 @@ class Entity {
 	public var r:Float;
 	public var dx = 0.;
 	public var dy = 0.;
-	public var friction = 0.9;
+	public var friction = 0.96;
 	public var spr:h2d.Drawable;
 	public var col:h2d.col.Circle;
 	public var intx:h2d.Interactive;
@@ -56,6 +56,8 @@ class Entity {
 		intx.stopCapture();
 		line.visible = false;
 		line.scaleX = 0;
+		dx = (line.x - event.relX) / 10;
+		dy = (line.y - event.relY) / 10;
 		dragging = false;
 	}
 
@@ -66,5 +68,9 @@ class Entity {
 		spr.y = y;
 		col.x = x;
 		col.y = y;
+		if (dragging) {
+			line.x = x;
+			line.y = y;
+		}
 	}
 }

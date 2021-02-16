@@ -15,6 +15,36 @@ System.prototype = {
 	}
 	,__class__: System
 };
+var BorderSystem = function() {
+	System.call(this);
+};
+BorderSystem.__name__ = "BorderSystem";
+BorderSystem.__super__ = System;
+BorderSystem.prototype = $extend(System.prototype,{
+	update: function(tmod) {
+		var _g = 0;
+		var _g1 = Entity.ALL;
+		while(_g < _g1.length) {
+			var e = _g1[_g];
+			++_g;
+			if(e.y > 720) {
+				e.y = 720;
+				e.dy = -e.dy;
+			} else if(e.y < 0) {
+				e.y = 0;
+				e.dy = -e.dy;
+			}
+			if(e.x > 1280) {
+				e.x = 1280;
+				e.dx = -e.dx;
+			} else if(e.x < 0) {
+				e.x = 0;
+				e.dx = -e.dx;
+			}
+		}
+	}
+	,__class__: BorderSystem
+});
 var CollisionSystem = function() {
 	System.call(this);
 };
@@ -91,7 +121,7 @@ EReg.prototype = {
 };
 var Entity = function(x,y,r) {
 	this.dragging = false;
-	this.friction = 0.9;
+	this.friction = 0.96;
 	this.dy = 0.;
 	this.dx = 0.;
 	Entity.ALL.push(this);
@@ -142,6 +172,8 @@ Entity.prototype = {
 		var _this = this.line;
 		_this.posChanged = true;
 		_this.scaleX = 0;
+		this.dx = (this.line.x - event.relX) / 10;
+		this.dy = (this.line.y - event.relY) / 10;
 		this.dragging = false;
 	}
 	,preUpdate: function(tmod) {
@@ -155,6 +187,14 @@ Entity.prototype = {
 		_this.y = this.y;
 		this.col.x = this.x;
 		this.col.y = this.y;
+		if(this.dragging) {
+			var _this = this.line;
+			_this.posChanged = true;
+			_this.x = this.x;
+			var _this = this.line;
+			_this.posChanged = true;
+			_this.y = this.y;
+		}
 	}
 	,__class__: Entity
 };
@@ -400,7 +440,7 @@ Main.prototype = $extend(hxd_App.prototype,{
 		this.line.set_visible(false);
 		new Entity(100,200,8);
 		new Entity(200,100,8);
-		this.systems = [new CollisionSystem(),new MoveSystem()];
+		this.systems = [new BorderSystem(),new CollisionSystem(),new MoveSystem()];
 	}
 	,update: function(dt) {
 		hxd_App.prototype.update.call(this,dt);
