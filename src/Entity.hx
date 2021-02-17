@@ -3,6 +3,8 @@ class Entity {
 
 	public var x:Float;
 	public var y:Float;
+	public var xx:Float;
+	public var yy:Float;
 	public var r:Float;
 	public var dx = 0.;
 	public var dy = 0.;
@@ -19,6 +21,8 @@ class Entity {
 
 		this.x = x;
 		this.y = y;
+		this.xx = x;
+		this.yy = y;
 		this.r = r;
 
 		var g = new h2d.Graphics(Main.inst.s2d);
@@ -64,13 +68,15 @@ class Entity {
 	public function preUpdate(tmod:Float) {}
 
 	public function postUpdate(tmod:Float) {
-		spr.x = x;
-		spr.y = y;
+		spr.x = (x + xx) / 2;
+		spr.y = (y + yy) / 2;
 		col.x = x;
 		col.y = y;
 		if (dragging) {
 			line.x = x;
 			line.y = y;
 		}
+		xx = x;
+		yy = y;
 	}
 }

@@ -15,6 +15,7 @@ class Main extends hxd.App {
 		line.visible = false;
 
 		new Entity(100, 200, 8);
+		new Entity(70, 180, 8);
 		new Entity(200, 100, 8);
 
 		systems = [new BorderSystem(), new CollisionSystem(), new MoveSystem()];
