@@ -31,7 +31,7 @@ class Entity {
 		g.endFill();
 		spr = g;
 
-		col = new h2d.col.Circle(x, y, r);
+		col = new h2d.col.Circle(x, y, r * 1.2);
 		intx = new h2d.Interactive(128, 128, Main.inst.s2d, col);
 		line = Main.inst.line;
 

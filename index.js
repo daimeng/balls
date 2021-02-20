@@ -55,6 +55,7 @@ CollisionSystem.prototype = $extend(System.prototype,{
 		var elen = Entity.ALL.length;
 		var a;
 		var b;
+		var r;
 		var rr;
 		var xdist;
 		var ydist;
@@ -68,12 +69,13 @@ CollisionSystem.prototype = $extend(System.prototype,{
 			while(_g2 < _g3) {
 				var j = _g2++;
 				b = Entity.ALL[j];
-				rr = a.r + b.r + 1;
-				if(Math.abs(a.x - b.x) < rr && Math.abs(a.y - b.y) < rr) {
+				r = a.r + b.r;
+				rr = r * r;
+				if(Math.abs(a.x - b.x) < r + 1 && Math.abs(a.y - b.y) < r + 1) {
 					xdist = a.x - b.x;
 					ydist = a.y - b.y;
-					var dist = Math.sqrt(xdist * xdist + ydist * ydist);
-					if(dist <= rr) {
+					var distsq = xdist * xdist + ydist * ydist;
+					if(distsq <= rr) {
 						a.x = (a.xx + a.x) / 2;
 						a.y = (a.yy + a.y) / 2;
 						b.x = (b.xx + b.x) / 2;
@@ -144,7 +146,7 @@ var Entity = function(x,y,r) {
 	g.drawCircle(0,0,r,16);
 	g.endFill();
 	this.spr = g;
-	this.col = new h2d_col_Circle(x,y,r);
+	this.col = new h2d_col_Circle(x,y,r * 1.2);
 	this.intx = new h2d_Interactive(128,128,Main.inst.s2d,this.col);
 	this.line = Main.inst.line;
 	this.intx.onPush = $bind(this,this.handleClick);

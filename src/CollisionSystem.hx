@@ -1,21 +1,22 @@
 class CollisionSystem extends System {
 	public override inline function update(tmod:Float) {
 		var elen = Entity.ALL.length;
-		var a, b, rr, xdist, ydist;
+		var a, b, r, rr, xdist, ydist;
 		for (i in 0...elen) {
 			a = Entity.ALL[i];
 			for (j in i + 1...elen) {
 				b = Entity.ALL[j];
-				rr = a.r + b.r + 1;
+				r = a.r + b.r;
+				rr = r * r;
 
 				// AABB check
-				if (Math.abs(a.x - b.x) < rr && Math.abs(a.y - b.y) < rr) {
+				if (Math.abs(a.x - b.x) < (r + 1) && Math.abs(a.y - b.y) < (r + 1)) {
 					// Real distance check
 					xdist = a.x - b.x;
 					ydist = a.y - b.y;
-					var dist = Math.sqrt(xdist * xdist + ydist * ydist);
+					var distsq = xdist * xdist + ydist * ydist;
 
-					if (dist <= rr) {
+					if (distsq <= rr) {
 						a.x = (a.xx + a.x) / 2;
 						a.y = (a.yy + a.y) / 2;
 						b.x = (b.xx + b.x) / 2;
