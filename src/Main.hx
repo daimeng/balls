@@ -5,7 +5,7 @@ class Main extends hxd.App {
 	public var line:h2d.Graphics;
 
 	override function init() {
-		s2d.scaleMode = Stretch(1280, 720);
+		s2d.scaleMode = LetterBox(1280, 720);
 
 		line = new h2d.Graphics(s2d);
 		line.beginFill(0xFFFFFFFF);
