@@ -51,7 +51,18 @@ var CollisionSystem = function() {
 CollisionSystem.__name__ = "CollisionSystem";
 CollisionSystem.__super__ = System;
 CollisionSystem.prototype = $extend(System.prototype,{
-	update: function(tmod) {
+	collide: function(a,b) {
+		var dira0 = Math.atan2(a.dy,a.dx);
+		var dirb0 = Math.atan2(b.dy,b.dx);
+		var norm0 = Math.atan2(b.y - a.y,b.x - a.x);
+		var vai = Math.sqrt(a.dy * a.dy + a.dx * a.dx);
+		var vbi = Math.sqrt(b.dy * b.dy + b.dx * b.dx);
+		var vxa = vbi * Math.cos(dirb0 - norm0) * Math.cos(norm0) + vai * Math.sin(dira0 - norm0) * Math.cos(norm0 + Math.PI * 0.5);
+		var vya = vbi * Math.cos(dirb0 - norm0) * Math.sin(norm0) + vai * Math.sin(dira0 - norm0) * Math.sin(norm0 + Math.PI * 0.5);
+		var vxb = vai * Math.cos(dira0 - norm0) * Math.cos(norm0) + vbi * Math.sin(dirb0 - norm0) * Math.cos(norm0 + Math.PI * 0.5);
+		var vyb = vai * Math.cos(dira0 - norm0) * Math.sin(norm0) + vbi * Math.sin(dirb0 - norm0) * Math.sin(norm0 + Math.PI * 0.5);
+	}
+	,update: function(tmod) {
 		var elen = Entity.ALL.length;
 		var a;
 		var b;
@@ -74,33 +85,31 @@ CollisionSystem.prototype = $extend(System.prototype,{
 					ydist = a.y - b.y;
 					var dist = Math.sqrt(xdist * xdist + ydist * ydist);
 					if(dist <= rr) {
-						var na0 = Math.atan2(b.y - a.y,b.x - a.x);
+						a.x = (a.xx + a.x) / 2;
+						a.y = (a.yy + a.y) / 2;
+						b.x = (b.xx + b.x) / 2;
+						b.y = (b.yy + b.y) / 2;
 						var dira0 = Math.atan2(a.dy,a.dx);
-						var nb0 = Math.atan2(a.y - b.y,a.x - b.x);
 						var dirb0 = Math.atan2(b.dy,b.dx);
-						var speeda = Math.sqrt(a.dy * a.dy + a.dx * a.dx);
-						var speedb = Math.sqrt(b.dy * b.dy + b.dx * b.dx);
-						var cosa = Math.cos(dira0 - na0);
-						var sina = Math.sin(dira0 - na0);
-						var cosb = Math.cos(dirb0 - nb0);
-						var sinb = Math.sin(dirb0 - nb0);
-						var norma = cosa * speeda;
-						var perpa = sina * speeda;
-						var normb = cosb * speedb;
-						var perpb = sinb * speedb;
-						var normfa = normb;
-						var normfb = norma;
-						a.dx = Math.cos(nb0) * normfa + Math.sin(na0) * perpa;
-						a.dy = Math.sin(nb0) * normfa + Math.cos(na0) * perpa;
-						b.dx = Math.cos(na0) * normfb + Math.sin(nb0) * perpb;
-						b.dy = Math.sin(na0) * normfb + Math.cos(nb0) * perpb;
-						var overlap = rr - dist;
-						var nx = Math.cos(na0);
-						var ny = Math.sin(na0);
-						a.x -= overlap * nx;
-						a.y -= overlap * ny;
-						b.x += overlap * nx;
-						b.y += overlap * ny;
+						var norm0 = Math.atan2(b.y - a.y,b.x - a.x);
+						var vai = Math.sqrt(a.dy * a.dy + a.dx * a.dx);
+						var vbi = Math.sqrt(b.dy * b.dy + b.dx * b.dx);
+						var cosa = Math.cos(dira0 - norm0);
+						var cosb = Math.cos(dirb0 - norm0);
+						var sina = Math.sin(dira0 - norm0);
+						var sinb = Math.sin(dirb0 - norm0);
+						var cosn = Math.cos(norm0);
+						var sinn = Math.sin(norm0);
+						var cosp = Math.cos(norm0 + Math.PI * 0.5);
+						var sinp = Math.sin(norm0 + Math.PI * 0.5);
+						var norma = cosa * vai;
+						var perpa = sina * vai;
+						var normb = cosb * vbi;
+						var perpb = sinb * vbi;
+						a.dx = normb * cosn + perpa * cosp;
+						a.dy = normb * sinn + perpa * sinp;
+						b.dx = norma * cosn + perpb * cosp;
+						b.dy = norma * sinn + perpb * sinp;
 					}
 				}
 			}
@@ -21541,6 +21550,9 @@ h3d_impl_Driver.prototype = {
 	,begin: function(frame) {
 	}
 	,log: function(str) {
+		if(this.logEnable) {
+			this.logImpl(str);
+		}
 	}
 	,generateMipMaps: function(texture) {
 		throw haxe_Exception.thrown("Mipmaps auto generation is not supported on this platform");
@@ -27107,6 +27119,10 @@ h3d_pass_Default.prototype = $extend(h3d_pass_Base.prototype,{
 		}
 	}
 	,log: function(str) {
+		var _this = this.ctx.engine.driver;
+		if(_this.logEnable) {
+			_this.logImpl(str);
+		}
 	}
 	,drawObject: function(p) {
 		this.ctx.drawPass = p;
@@ -31745,6 +31761,9 @@ h3d_scene_Object.prototype = {
 		if(o == null) {
 			o = new h3d_scene_Object();
 		}
+		if(js_Boot.getClass(o) != js_Boot.getClass(this)) {
+			throw haxe_Exception.thrown(Std.string(this) + " is missing clone()");
+		}
 		var v = this.x;
 		o.x = v;
 		var f = 1;
@@ -34059,6 +34078,7 @@ var h3d_scene_Scene = function(createRenderer,createLightSystem) {
 	if(createRenderer == null) {
 		createRenderer = true;
 	}
+	this.checkPasses = true;
 	h3d_scene_Object.call(this,null);
 	this.window = hxd_Window.getInstance();
 	this.eventListeners = [];
@@ -34770,6 +34790,16 @@ h3d_scene_Scene.prototype = $extend(h3d_scene_Object.prototype,{
 			this.lightSystem.initLights(this.ctx);
 		}
 		this.renderer.process(passes);
+		if(!this.ctx.computingStatic && this.checkPasses) {
+			var _g = 0;
+			while(_g < passes.length) {
+				var p = passes[_g];
+				++_g;
+				if(!p.rendered) {
+					haxe_Log.trace("Pass " + p.name + " has not been rendered : don't know how to handle.",{ fileName : "h3d/scene/Scene.hx", lineNumber : 438, className : "h3d.scene.Scene", methodName : "render"});
+				}
+			}
+		}
 		if(this.camera.rightHanded) {
 			engine.driver.setRenderFlag(h3d_impl_RenderFlag.CameraHandness,0);
 		}
@@ -47073,8 +47103,14 @@ hxd_res_NanoJpeg.prototype = {
 		this.pos += count;
 		this.size -= count;
 		this.length -= count;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 	}
 	,syntax: function(flag) {
+		if(flag) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 	}
 	,get: function(p) {
 		return this.bytes.b[this.pos + p];
@@ -47101,6 +47137,9 @@ hxd_res_NanoJpeg.prototype = {
 			this.bufbits += 8;
 			this.buf = this.buf << 8 | newbyte;
 			if(newbyte == 255) {
+				if(this.size == 0) {
+					throw haxe_Exception.thrown("Invalid JPEG file");
+				}
 				var marker = this.bytes.b[this.pos];
 				this.pos++;
 				this.size--;
@@ -47111,6 +47150,9 @@ hxd_res_NanoJpeg.prototype = {
 				case 0:case 255:
 					break;
 				default:
+					if((marker & 248) != 208) {
+						throw haxe_Exception.thrown("Invalid JPEG file");
+					}
 					this.buf = this.buf << 8 | marker;
 					this.bufbits += 8;
 				}
@@ -47130,26 +47172,59 @@ hxd_res_NanoJpeg.prototype = {
 		return r;
 	}
 	,njDecodeLength: function() {
+		if(this.size < 2) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.length = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
+		if(this.length > this.size) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.pos += 2;
 		this.size -= 2;
 		this.length -= 2;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 	}
 	,njSkipMarker: function() {
+		if(this.size < 2) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.length = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
+		if(this.length > this.size) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.pos += 2;
 		this.size -= 2;
 		this.length -= 2;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		var count = this.length;
 		this.pos += count;
 		this.size -= count;
 		this.length -= count;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 	}
 	,njDecodeSOF: function() {
+		if(this.size < 2) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.length = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
+		if(this.length > this.size) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.pos += 2;
 		this.size -= 2;
 		this.length -= 2;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
+		if(this.length < 9) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		if(this.bytes.b[this.pos] != 8) {
 			this.notSupported();
 		}
@@ -47159,11 +47234,17 @@ hxd_res_NanoJpeg.prototype = {
 		this.pos += 6;
 		this.size -= 6;
 		this.length -= 6;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		switch(this.ncomp) {
 		case 1:case 3:
 			break;
 		default:
 			this.notSupported();
+		}
+		if(this.length < this.ncomp * 3) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
 		}
 		var ssxmax = 0;
 		var ssymax = 0;
@@ -47174,17 +47255,29 @@ hxd_res_NanoJpeg.prototype = {
 			var c = this.comps[i];
 			c.cid = this.bytes.b[this.pos];
 			c.ssx = this.bytes.b[this.pos + 1] >> 4;
+			if(c.ssx == 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			if((c.ssx & c.ssx - 1) != 0) {
 				this.notSupported();
 			}
 			c.ssy = this.bytes.b[this.pos + 1] & 15;
+			if(c.ssy == 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			if((c.ssy & c.ssy - 1) != 0) {
 				this.notSupported();
 			}
 			c.qtsel = this.bytes.b[this.pos + 2];
+			if((c.qtsel & 252) != 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			this.pos += 3;
 			this.size -= 3;
 			this.length -= 3;
+			if(this.size < 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			this.qtused |= 1 << c.qtsel;
 			if(c.ssx > ssxmax) {
 				ssxmax = c.ssx;
@@ -47221,14 +47314,29 @@ hxd_res_NanoJpeg.prototype = {
 		this.pos += count;
 		this.size -= count;
 		this.length -= count;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 	}
 	,njDecodeDQT: function() {
+		if(this.size < 2) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.length = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
+		if(this.length > this.size) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.pos += 2;
 		this.size -= 2;
 		this.length -= 2;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		while(this.length >= 65) {
 			var i = this.bytes.b[this.pos];
+			if((i & 252) != 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			this.qtavail |= 1 << i;
 			var t = this.qtab[i];
 			var _g = 0;
@@ -47239,15 +47347,33 @@ hxd_res_NanoJpeg.prototype = {
 			this.pos += 65;
 			this.size -= 65;
 			this.length -= 65;
+			if(this.size < 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
+		}
+		if(this.length != 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
 		}
 	}
 	,njDecodeDHT: function() {
+		if(this.size < 2) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.length = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
+		if(this.length > this.size) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.pos += 2;
 		this.size -= 2;
 		this.length -= 2;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		while(this.length >= 17) {
 			var i = this.bytes.b[this.pos];
+			if((i & 236) != 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			i = i >> 4 & 1 | (i & 3) << 1;
 			this.counts[0] = this.bytes.b[this.pos + 1];
 			this.counts[1] = this.bytes.b[this.pos + 2];
@@ -47268,6 +47394,9 @@ hxd_res_NanoJpeg.prototype = {
 			this.pos += 17;
 			this.size -= 17;
 			this.length -= 17;
+			if(this.size < 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			var vlc = this.vlctab[i];
 			var vpos = 0;
 			var remain = 65536;
@@ -47280,7 +47409,13 @@ hxd_res_NanoJpeg.prototype = {
 				if(currcnt == 0) {
 					continue;
 				}
+				if(this.length < currcnt) {
+					throw haxe_Exception.thrown("Invalid JPEG file");
+				}
 				remain -= currcnt << 16 - codelen;
+				if(remain < 0) {
+					throw haxe_Exception.thrown("Invalid JPEG file");
+				}
 				var _g1 = 0;
 				var _g2 = currcnt;
 				while(_g1 < _g2) {
@@ -47297,27 +47432,51 @@ hxd_res_NanoJpeg.prototype = {
 				this.pos += currcnt;
 				this.size -= currcnt;
 				this.length -= currcnt;
+				if(this.size < 0) {
+					throw haxe_Exception.thrown("Invalid JPEG file");
+				}
 			}
 			while(remain-- != 0) {
 				vlc.b[vpos] = 0;
 				vpos += 2;
 			}
 		}
+		if(this.length != 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 	}
 	,njDecodeDRI: function() {
+		if(this.size < 2) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.length = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
+		if(this.length > this.size) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.pos += 2;
 		this.size -= 2;
 		this.length -= 2;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
+		if(this.length < 2) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.rstinterval = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
 		var count = this.length;
 		this.pos += count;
 		this.size -= count;
 		this.length -= count;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 	}
 	,njGetVLC: function(vlc) {
 		var value = this.njShowBits(16);
 		var bits = vlc.b[value << 1];
+		if(bits == 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		if(this.bufbits < bits) {
 			this.njShowBits(bits);
 		}
@@ -47476,6 +47635,9 @@ hxd_res_NanoJpeg.prototype = {
 		var vlc = this.vlctab[c.dctabsel];
 		var value1 = this.njShowBits(16);
 		var bits = vlc.b[value1 << 1];
+		if(bits == 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		if(this.bufbits < bits) {
 			this.njShowBits(bits);
 		}
@@ -47502,6 +47664,9 @@ hxd_res_NanoJpeg.prototype = {
 		while(true) {
 			var value1 = this.njShowBits(16);
 			var bits = at.b[value1 << 1];
+			if(bits == 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			if(this.bufbits < bits) {
 				this.njShowBits(bits);
 			}
@@ -47523,7 +47688,13 @@ hxd_res_NanoJpeg.prototype = {
 			if(this.vlcCode == 0) {
 				break;
 			}
+			if((this.vlcCode & 15) == 0 && this.vlcCode != 240) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			coef += (this.vlcCode >> 4) + 1;
+			if(coef > 63) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			this.block[this.njZZ[coef]] = value * qt[coef];
 			if(!(coef < 63)) {
 				break;
@@ -48558,26 +48729,50 @@ hxd_res_NanoJpeg.prototype = {
 		throw haxe_Exception.thrown("This JPG file is not supported");
 	}
 	,njDecodeScan: function() {
+		if(this.size < 2) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.length = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
+		if(this.length > this.size) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		this.pos += 2;
 		this.size -= 2;
 		this.length -= 2;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
+		if(this.length < 4 + 2 * this.ncomp) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		if(this.bytes.b[this.pos] != this.ncomp) {
 			this.notSupported();
 		}
 		this.pos += 1;
 		this.size -= 1;
 		this.length -= 1;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		var _g = 0;
 		var _g1 = this.ncomp;
 		while(_g < _g1) {
 			var i = _g++;
 			var c = this.comps[i];
+			if(this.bytes.b[this.pos] != c.cid) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
+			if((this.bytes.b[this.pos + 1] & 236) != 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			c.dctabsel = this.bytes.b[this.pos + 1] >> 4 << 1;
 			c.actabsel = (this.bytes.b[this.pos + 1] & 3) << 1 | 1;
 			this.pos += 2;
 			this.size -= 2;
 			this.length -= 2;
+			if(this.size < 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 		}
 		var start = this.bytes.b[this.pos];
 		var count = this.bytes.b[this.pos + 1];
@@ -48589,6 +48784,9 @@ hxd_res_NanoJpeg.prototype = {
 		this.pos += count;
 		this.size -= count;
 		this.length -= count;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		var mbx = 0;
 		var mby = 0;
 		var rstcount = this.rstinterval;
@@ -48622,6 +48820,9 @@ hxd_res_NanoJpeg.prototype = {
 				var r = this.njShowBits(16);
 				this.bufbits -= 16;
 				var i1 = r;
+				if((i1 & 65528) != 65488 || (i1 & 7) != nextrst) {
+					throw haxe_Exception.thrown("Invalid JPEG file");
+				}
 				nextrst = nextrst + 1 & 7;
 				rstcount = this.rstinterval;
 				this.comps[0].dcpred = 0;
@@ -48835,10 +49036,19 @@ hxd_res_NanoJpeg.prototype = {
 		this.pos += 2;
 		this.size -= 2;
 		this.length -= 2;
+		if(this.size < 0) {
+			throw haxe_Exception.thrown("Invalid JPEG file");
+		}
 		_hx_loop1: while(true) {
+			if(this.size < 2 || this.bytes.b[this.pos] != 255) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			this.pos += 2;
 			this.size -= 2;
 			this.length -= 2;
+			if(this.size < 0) {
+				throw haxe_Exception.thrown("Invalid JPEG file");
+			}
 			switch(this.bytes.b[this.pos + (-1)]) {
 			case 192:
 				this.njDecodeSOF();
@@ -48877,28 +49087,52 @@ hxd_res_NanoJpeg.prototype = {
 				this.njDecodeDRI();
 				break;
 			case 254:
+				if(this.size < 2) {
+					throw haxe_Exception.thrown("Invalid JPEG file");
+				}
 				this.length = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
+				if(this.length > this.size) {
+					throw haxe_Exception.thrown("Invalid JPEG file");
+				}
 				this.pos += 2;
 				this.size -= 2;
 				this.length -= 2;
+				if(this.size < 0) {
+					throw haxe_Exception.thrown("Invalid JPEG file");
+				}
 				var count = this.length;
 				this.pos += count;
 				this.size -= count;
 				this.length -= count;
+				if(this.size < 0) {
+					throw haxe_Exception.thrown("Invalid JPEG file");
+				}
 				break;
 			default:
 				switch(this.bytes.b[this.pos + (-1)] & 240) {
 				case 192:
 					throw haxe_Exception.thrown("Unsupported jpeg type " + (this.bytes.b[this.pos + (-1)] & 15));
 				case 224:
+					if(this.size < 2) {
+						throw haxe_Exception.thrown("Invalid JPEG file");
+					}
 					this.length = this.bytes.b[this.pos] << 8 | this.bytes.b[this.pos + 1];
+					if(this.length > this.size) {
+						throw haxe_Exception.thrown("Invalid JPEG file");
+					}
 					this.pos += 2;
 					this.size -= 2;
 					this.length -= 2;
+					if(this.size < 0) {
+						throw haxe_Exception.thrown("Invalid JPEG file");
+					}
 					var count1 = this.length;
 					this.pos += count1;
 					this.size -= count1;
 					this.length -= count1;
+					if(this.size < 0) {
+						throw haxe_Exception.thrown("Invalid JPEG file");
+					}
 					break;
 				default:
 					throw haxe_Exception.thrown("Unsupported jpeg tag 0x" + StringTools.hex(this.bytes.b[this.pos + (-1)],2));
@@ -49816,6 +50050,7 @@ hxd_snd_Manager.prototype = {
 			c.duration = c.sound.getData().get_duration();
 			var playedSamples = this.driver.getPlayedSampleCount(s.handle);
 			if(playedSamples < 0) {
+				haxe_Log.trace("playedSamples should positive : bug in driver",{ fileName : "hxd/snd/Manager.hx", lineNumber : 360, className : "hxd.snd.Manager", methodName : "update"});
 				playedSamples = 0;
 			}
 			c.set_position(playedSamples / s.buffers[0].sampleRate);
@@ -52582,6 +52817,12 @@ hxsl_Cache.prototype = {
 		haxe_ds_ArraySort.sort(shaderDatas,function(s1,s2) {
 			return s2.p - s1.p;
 		});
+		var _g = 0;
+		while(_g < shaderDatas.length) {
+			var s = shaderDatas[_g];
+			++_g;
+			hxsl_Printer.check(s.inst.shader);
+		}
 		var linker = new hxsl_Linker(batchMode);
 		var s;
 		try {
@@ -52644,6 +52885,14 @@ hxsl_Cache.prototype = {
 				checkRec(v);
 			}
 		}
+		var _g = [];
+		var _g1 = 0;
+		while(_g1 < shaderDatas.length) {
+			var s1 = shaderDatas[_g1];
+			++_g1;
+			_g.push(s1.inst.shader);
+		}
+		hxsl_Printer.check(s,_g);
 		var paramVars = new haxe_ds_IntMap();
 		var _g = 0;
 		var _g1 = linker.allVars;
@@ -52674,15 +52923,19 @@ hxsl_Cache.prototype = {
 				throw _g;
 			}
 		}
+		hxsl_Printer.check(s1.vertex,[prev]);
+		hxsl_Printer.check(s1.fragment,[prev]);
 		var prev = s1;
 		var s = new hxsl_Dce().dce(s1.vertex,s1.fragment);
+		hxsl_Printer.check(s.vertex,[prev.vertex]);
+		hxsl_Printer.check(s.fragment,[prev.fragment]);
 		var r = this.buildRuntimeShader(s.vertex,s.fragment,paramVars);
 		var _g = [];
-		var _g4_l = shaders;
-		var _g4_last = null;
-		while(_g4_l != _g4_last) {
-			var s = _g4_l.s;
-			_g4_l = _g4_l.next;
+		var _g7_l = shaders;
+		var _g7_last = null;
+		while(_g7_l != _g7_last) {
+			var s = _g7_l.s;
+			_g7_l = _g7_l.next;
 			var s1 = s;
 			_g.push(new hxsl_ShaderInstanceDesc(s1.shader,s1.constBits));
 		}
@@ -52723,6 +52976,8 @@ hxsl_Cache.prototype = {
 		r.globals = new haxe_ds_IntMap();
 		this.initGlobals(r,r.vertex);
 		this.initGlobals(r,r.fragment);
+		hxsl_Printer.check(r.vertex.data,[vertex]);
+		hxsl_Printer.check(r.fragment.data,[fragment]);
 		return r;
 	}
 	,initGlobals: function(r,s) {
@@ -61392,6 +61647,7 @@ hxsl_SharedShader.prototype = {
 		$eval.inlineCalls = true;
 		$eval.unrollLoops = hxsl_SharedShader.UNROLL_LOOPS;
 		var i = new hxsl_ShaderInstance($eval.eval(this.data));
+		hxsl_Printer.check(i.shader,[this.data]);
 		this.paramsCount = 0;
 		var _g = 0;
 		var _g1 = this.data.vars;
@@ -62286,7 +62542,7 @@ hxd_impl_BufferFlags.UniformDynamic = 1;
 hxd_impl_BufferFlags.RawFormat = 2;
 hxd_impl_BufferFlags.RawQuads = 3;
 hxd_poly2tri_Point.C_ID = 0;
-hxd_res_Resource.LIVE_UPDATE = false;
+hxd_res_Resource.LIVE_UPDATE = true;
 hxd_res_ImageFormat.Jpg = 0;
 hxd_res_ImageFormat.Png = 1;
 hxd_res_ImageFormat.Gif = 2;
@@ -62412,3 +62668,5 @@ hxsl_SharedShader.UNROLL_LOOPS = false;
 	haxe_EntryPoint.run();
 }
 })(typeof window != "undefined" ? window : typeof global != "undefined" ? global : typeof self != "undefined" ? self : this);
+
+//# sourceMappingURL=index.js.map

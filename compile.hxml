@@ -1,4 +1,6 @@
 -cp src
 -lib heaps
+-lib utest
 -js index.js
 -main Main
+--debug
